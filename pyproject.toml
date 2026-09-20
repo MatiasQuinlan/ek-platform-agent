@@ -5,6 +5,13 @@ description = "Local EK Platform agent powered by the user's Codex/ChatGPT sessi
 requires-python = ">=3.11"
 dependencies = ["keyring>=25.6.0"]
 
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [project.scripts]
 ek-agent = "ek_agent.main:main"
 
