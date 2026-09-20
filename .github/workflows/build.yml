@@ -1,0 +1,34 @@
+name: Build agent
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --all-groups
+      - run: uv run pyinstaller --name EKPlatformAgent --windowed --onefile src/ek_agent/__main__.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ek-platform-agent-macos
+          path: dist/EKPlatformAgent
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --all-groups
+      - run: uv run pyinstaller --name EKPlatformAgent --windowed --onefile src/ek_agent/__main__.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ek-platform-agent-windows
+          path: dist/EKPlatformAgent.exe

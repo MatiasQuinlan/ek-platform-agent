@@ -1,0 +1,19 @@
+[project]
+name = "ek-platform-agent"
+version = "0.1.0"
+description = "Local EK Platform agent powered by the user's Codex/ChatGPT session"
+requires-python = ">=3.11"
+dependencies = ["keyring>=25.6.0"]
+
+[project.scripts]
+ek-agent = "ek_agent.main:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3.0", "ruff>=0.9.0", "mypy>=1.13.0", "pyinstaller>=6.11.0"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
