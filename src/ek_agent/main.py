@@ -27,6 +27,8 @@ class App:
         self.status = tk.StringVar(value="Desconectado")
         self.worker: Worker | None = None
         self._build()
+        if get_access_token():
+            self.start_worker()
 
     def _build(self) -> None:
         frame = ttk.Frame(self.root, padding=20)
