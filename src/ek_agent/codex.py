@@ -11,7 +11,7 @@ def installed() -> bool:
 def login() -> subprocess.Popen[str]:
     if not installed():
         raise RuntimeError("Codex CLI no está instalado o no está en PATH")
-    return subprocess.Popen(["codex", "--login"], text=True)
+    return subprocess.Popen(["codex", "login"], text=True)
 
 
 def execute(prompt: str) -> str:

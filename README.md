@@ -15,7 +15,7 @@ uv sync --all-groups
 uv run ek-agent
 ```
 
-Pulsa **Conectar ChatGPT** para abrir el flujo oficial `codex --login`. Después indica la URL de API y el token Cognito, y pulsa **Iniciar agente**.
+Pulsa **Conectar ChatGPT** para abrir el flujo oficial `codex login`. Después indica la URL de API y el token Cognito, y pulsa **Iniciar agente**.
 
 El token Cognito se guarda usando el almacén de credenciales del sistema mediante `keyring`; la sesión de ChatGPT permanece bajo el control de Codex CLI.
 
