@@ -6,11 +6,14 @@ import http.server
 import json
 import os
 import secrets
+import ssl
 import threading
 import urllib.parse
 import urllib.request
 import webbrowser
 from typing import Any
+
+import certifi
 
 DEFAULT_REGION = "us-east-1"
 DEFAULT_USER_POOL_CLIENT = "3pauvl8f3ba4tstu3114ojuuj0"
@@ -73,7 +76,9 @@ def login() -> str:
         method="POST",
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
-    with urllib.request.urlopen(request, timeout=30) as response:
+    with urllib.request.urlopen(
+        request, timeout=30, context=ssl.create_default_context(cafile=certifi.where())
+    ) as response:
         payload = json.loads(response.read())
     token = payload.get("access_token")
     if not isinstance(token, str) or not token:

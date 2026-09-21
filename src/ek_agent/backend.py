@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import ssl
 import urllib.error
 import urllib.request
 from typing import Any
+
+import certifi
 
 
 class BackendClient:
@@ -36,7 +39,9 @@ class BackendClient:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(
+                request, timeout=30, context=ssl.create_default_context(cafile=certifi.where())
+            ) as response:
                 raw = response.read()
                 return response.status, json.loads(raw or b"{}")
         except urllib.error.HTTPError as error:
