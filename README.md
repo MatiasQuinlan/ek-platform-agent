@@ -26,6 +26,8 @@ GitHub Actions genera dos artefactos multiplataforma mediante PyInstaller:
 - macOS: `EKPlatformAgent-macOS.dmg`, que contiene `EKPlatformAgent.app`.
 - Windows: `EKPlatformAgent.exe` como aplicación GUI, sin ventana de terminal.
 
-La aplicación queda disponible en la barra de menú de macOS o en el área de notificación de Windows. Desde ese menú se puede mostrar la ventana, iniciar/detener el agente o salir. Después del primer login, los siguientes lanzamientos quedan ocultos en la bandeja y el agente se inicia automáticamente.
+La aplicación queda disponible en la barra de menú de macOS o en el área de notificación de Windows. Desde ese menú se puede mostrar la ventana, iniciar/detener el agente o salir. Después del primer login, los siguientes lanzamientos inician el agente automáticamente y muestran la ventana con su estado. Cerrar la ventana la oculta en la bandeja; **Salir** termina la aplicación.
+
+Los registros del agente se guardan en `~/.config/ek-platform-agent/agent.log` en macOS y en `%APPDATA%/ek-platform-agent/agent.log` en Windows.
 
 El workflow se ejecuta manualmente o al publicar un tag `v*`. Los artefactos se descargan desde la ejecución de GitHub Actions `Build agent`. Para distribución pública todavía hay que añadir firma/notarización de Apple y firma Authenticode para Windows.

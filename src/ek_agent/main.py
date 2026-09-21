@@ -4,6 +4,7 @@ import logging
 import sys
 import threading
 import tkinter as tk
+from logging.handlers import RotatingFileHandler
 from tkinter import messagebox, ttk
 
 import pystray
@@ -12,7 +13,8 @@ from PIL import Image, ImageDraw
 from .backend import BackendClient
 from .codex import installed, login
 from .cognito import login as cognito_login
-from .config import get_access_token, load, save, set_access_token
+from .config import config_path, get_access_token, load, save, set_access_token
+from .dispatch import MainThreadDispatcher
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -21,6 +23,8 @@ logger = logging.getLogger(__name__)
 class App:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
+        self.dispatcher = MainThreadDispatcher()
+        self._closing = False
         self.root.title("EK Platform Agent")
         self.root.geometry("520x300")
         values = load()
@@ -37,9 +41,9 @@ class App:
         self._build()
         self.root.protocol("WM_DELETE_WINDOW", self.hide_window)
         self._start_tray()
+        self.root.after(50, self._drain_events)
         if get_access_token():
-            self.start_worker()
-            self.hide_window()
+            self.root.after(0, self.start_worker)
 
     def _build(self) -> None:
         frame = ttk.Frame(self.root, padding=20)
@@ -67,23 +71,22 @@ class App:
             def wait_for_login() -> None:
                 return_code = process.wait()
                 if return_code == 0:
-                    self.root.after(
-                        0, self.status.set, "ChatGPT conectado. Abriendo login de EK Platform..."
+                    self.dispatcher.submit(
+                        self.status.set, "ChatGPT conectado. Abriendo login de EK Platform..."
                     )
                     try:
                         token = cognito_login()
                         set_access_token(token)
-                        self.root.after(0, self.token.set, token)
-                        self.root.after(0, self.start_worker)
+                        self.dispatcher.submit(self.token.set, token)
+                        self.dispatcher.submit(self.start_worker)
                     except Exception as error:  # noqa: BLE001 - show login errors to the user
                         error_text = str(error)
-                        self.root.after(
-                            0,
-                            lambda: messagebox.showerror("Cuenta EK Platform", error_text),
+                        self.dispatcher.submit(
+                            messagebox.showerror, "Cuenta EK Platform", error_text
                         )
                 else:
                     message = f"El login de ChatGPT terminó con código {return_code}."
-                    self.root.after(0, self.status.set, message)
+                    self.dispatcher.submit(self.status.set, message)
 
             threading.Thread(target=wait_for_login, daemon=True).start()
         except RuntimeError as error:
@@ -127,8 +130,8 @@ class App:
         self.root.withdraw()
 
     def show_window(self) -> None:
-        self.root.after(0, self.root.deiconify)
-        self.root.after(0, self.root.lift)
+        self.root.deiconify()
+        self.root.lift()
 
     def _start_tray(self) -> None:
         image = Image.new("RGBA", (64, 64), (29, 78, 216, 255))
@@ -136,33 +139,52 @@ class App:
         draw.rounded_rectangle((8, 8, 56, 56), radius=12, fill=(255, 255, 255, 255))
         draw.text((22, 17), "EK", fill=(29, 78, 216, 255))
         menu = pystray.Menu(
-            pystray.MenuItem("Mostrar ventana", lambda _icon, _item: self.show_window()),
             pystray.MenuItem(
-                "Iniciar agente", lambda _icon, _item: self.root.after(0, self.start_worker)
+                "Mostrar ventana", lambda _icon, _item: self.dispatcher.submit(self.show_window)
             ),
             pystray.MenuItem(
-                "Detener agente", lambda _icon, _item: self.root.after(0, self.stop_worker)
+                "Iniciar agente", lambda _icon, _item: self.dispatcher.submit(self.start_worker)
             ),
-            pystray.MenuItem("Salir", lambda _icon, _item: self.root.after(0, self.quit)),
+            pystray.MenuItem(
+                "Detener agente", lambda _icon, _item: self.dispatcher.submit(self.stop_worker)
+            ),
+            pystray.MenuItem("Salir", lambda _icon, _item: self.dispatcher.submit(self.quit)),
         )
         self.tray = pystray.Icon("ek-platform-agent", image, "EK Platform Agent", menu)
         if sys.platform == "darwin":
-            # AppKit requires its event loop to share the main Tk loop.
-            self.tray.run_detached()
+            # Tk owns the Cocoa event loop. pystray's default setup also touches
+            # AppKit from its setup thread, even with run_detached(). Disable
+            # that setup and show the icon explicitly here on the main thread.
+            self.tray.run_detached(setup=lambda _icon: None)
+            self.tray.visible = True
         else:
             threading.Thread(target=self.tray.run, name="tray", daemon=True).start()
 
     def quit(self) -> None:
+        self._closing = True
         self.stop_worker()
         if self.tray:
             self.tray.stop()
         self.root.destroy()
 
     def _notify(self, message: str) -> None:
-        self.root.after(0, self.status.set, message)
+        logger.info("%s", message)
+        self.dispatcher.submit(self.status.set, message)
+
+    def _drain_events(self) -> None:
+        self.dispatcher.drain()
+        if not self._closing:
+            self.root.after(50, self._drain_events)
 
 
 def main() -> None:
+    log_path = config_path().parent / "agent.log"
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(threadName)s %(name)s: %(message)s",
+        handlers=[RotatingFileHandler(log_path, maxBytes=1_000_000, backupCount=2)],
+    )
+    logger.info("Starting EK Platform Agent")
     root = tk.Tk()
     App(root)
     root.mainloop()
