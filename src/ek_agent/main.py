@@ -54,10 +54,25 @@ class App:
             def wait_for_login() -> None:
                 return_code = process.wait()
                 if return_code == 0:
-                    message = "ChatGPT conectado. Ahora conecta tu cuenta EK Platform."
+                    self.root.after(
+                        0, self.status.set, "ChatGPT conectado. Abriendo login de EK Platform..."
+                    )
+                    try:
+                        token = cognito_login()
+                        set_access_token(token)
+                        self.root.after(0, self.token.set, token)
+                        self.root.after(
+                            0, self.status.set, "Cuentas conectadas. Pulsa Iniciar agente."
+                        )
+                    except Exception as error:  # noqa: BLE001 - show login errors to the user
+                        error_text = str(error)
+                        self.root.after(
+                            0,
+                            lambda: messagebox.showerror("Cuenta EK Platform", error_text),
+                        )
                 else:
                     message = f"El login de ChatGPT terminó con código {return_code}."
-                self.root.after(0, self.status.set, message)
+                    self.root.after(0, self.status.set, message)
 
             threading.Thread(target=wait_for_login, daemon=True).start()
         except RuntimeError as error:
