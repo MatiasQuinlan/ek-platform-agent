@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
 
@@ -42,8 +43,18 @@ class App:
 
     def connect_codex(self) -> None:
         try:
-            login()
-            self.status.set("Se abrió el login oficial de ChatGPT en el navegador")
+            process = login()
+            self.status.set("Completa el login de ChatGPT en el navegador...")
+
+            def wait_for_login() -> None:
+                return_code = process.wait()
+                if return_code == 0:
+                    message = "ChatGPT conectado. Configura la API y pulsa Iniciar agente."
+                else:
+                    message = f"El login de ChatGPT terminó con código {return_code}."
+                self.root.after(0, self.status.set, message)
+
+            threading.Thread(target=wait_for_login, daemon=True).start()
         except RuntimeError as error:
             messagebox.showerror("Codex", str(error))
 
