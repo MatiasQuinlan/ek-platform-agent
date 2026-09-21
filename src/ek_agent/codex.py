@@ -18,7 +18,13 @@ def execute(prompt: str) -> str:
     if not installed():
         raise RuntimeError("Codex CLI no está instalado o no está en PATH")
     result = subprocess.run(
-        ["codex", "exec", "--full-auto", "--skip-git-repo-check", prompt],
+        [
+            "codex",
+            "exec",
+            "--dangerously-bypass-approvals-and-sandbox",
+            "--skip-git-repo-check",
+            prompt,
+        ],
         capture_output=True,
         text=True,
         timeout=300,
