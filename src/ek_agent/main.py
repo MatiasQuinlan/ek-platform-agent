@@ -6,6 +6,7 @@ from tkinter import messagebox, ttk
 
 from .backend import BackendClient
 from .codex import installed, login
+from .cognito import login as cognito_login
 from .config import get_access_token, load, save, set_access_token
 from .worker import Worker
 
@@ -28,15 +29,14 @@ class App:
         ttk.Label(frame, text="EK Platform Agent", font=("TkDefaultFont", 16, "bold")).pack()
         ttk.Label(frame, text="API del backend").pack(anchor="w", pady=(18, 0))
         ttk.Entry(frame, textvariable=self.api).pack(fill="x")
-        ttk.Label(frame, text="Token Cognito de la aplicación").pack(anchor="w", pady=(8, 0))
-        ttk.Entry(frame, textvariable=self.token, show="*").pack(fill="x")
         buttons = ttk.Frame(frame)
         buttons.pack(fill="x", pady=16)
         ttk.Button(buttons, text="Conectar ChatGPT", command=self.connect_codex).pack(side="left")
-        ttk.Button(buttons, text="Iniciar agente", command=self.start_worker).pack(
+        ttk.Button(buttons, text="Conectar cuenta EK", command=self.connect_backend).pack(
             side="left", padx=8
         )
-        ttk.Button(buttons, text="Detener", command=self.stop_worker).pack(side="left")
+        ttk.Button(buttons, text="Iniciar agente", command=self.start_worker).pack(side="left")
+        ttk.Button(buttons, text="Detener", command=self.stop_worker).pack(side="left", padx=8)
         ttk.Label(frame, textvariable=self.status).pack(anchor="w")
         if not installed():
             self.status.set("Instala Codex CLI antes de conectar ChatGPT")
@@ -49,7 +49,7 @@ class App:
             def wait_for_login() -> None:
                 return_code = process.wait()
                 if return_code == 0:
-                    message = "ChatGPT conectado. Configura la API y pulsa Iniciar agente."
+                    message = "ChatGPT conectado. Ahora conecta tu cuenta EK Platform."
                 else:
                     message = f"El login de ChatGPT terminó con código {return_code}."
                 self.root.after(0, self.status.set, message)
@@ -57,6 +57,15 @@ class App:
             threading.Thread(target=wait_for_login, daemon=True).start()
         except RuntimeError as error:
             messagebox.showerror("Codex", str(error))
+
+    def connect_backend(self) -> None:
+        try:
+            token = cognito_login()
+            set_access_token(token)
+            self.token.set(token)
+            self.status.set("Cuenta EK Platform conectada")
+        except Exception as error:  # noqa: BLE001 - show login errors to the user
+            messagebox.showerror("Cuenta EK Platform", str(error))
 
     def start_worker(self) -> None:
         token = self.token.get() or get_access_token()
