@@ -61,9 +61,7 @@ class App:
                         token = cognito_login()
                         set_access_token(token)
                         self.root.after(0, self.token.set, token)
-                        self.root.after(
-                            0, self.status.set, "Cuentas conectadas. Pulsa Iniciar agente."
-                        )
+                        self.root.after(0, self.start_worker)
                     except Exception as error:  # noqa: BLE001 - show login errors to the user
                         error_text = str(error)
                         self.root.after(
@@ -83,7 +81,7 @@ class App:
             token = cognito_login()
             set_access_token(token)
             self.token.set(token)
-            self.status.set("Cuenta EK Platform conectada")
+            self.start_worker()
         except Exception as error:  # noqa: BLE001 - show login errors to the user
             messagebox.showerror("Cuenta EK Platform", str(error))
 
