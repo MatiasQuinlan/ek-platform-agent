@@ -17,7 +17,12 @@ class App:
         self.root.title("EK Platform Agent")
         self.root.geometry("520x300")
         values = load()
-        self.api = tk.StringVar(value=values.get("api_url", ""))
+        self.api = tk.StringVar(
+            value=values.get(
+                "api_url",
+                "https://8a6tlv6z2a.execute-api.us-east-1.amazonaws.com/production",
+            )
+        )
         self.token = tk.StringVar(value="")
         self.status = tk.StringVar(value="Desconectado")
         self.worker: Worker | None = None

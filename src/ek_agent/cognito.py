@@ -29,7 +29,7 @@ def login() -> str:
     result: dict[str, str] = {}
 
     class Callback(http.server.BaseHTTPRequestHandler):
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             result["code"] = query.get("code", [""])[0]
             self.send_response(200)
