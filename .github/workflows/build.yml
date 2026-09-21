@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --all-groups
-      - run: uv run pyinstaller --name EKPlatformAgent --windowed --noconfirm src/ek_agent/__main__.py
+      - run: uv run pyinstaller --name EKPlatformAgent --windowed --noconfirm --hidden-import=tkinter --hidden-import=_tkinter src/ek_agent/__main__.py
       - run: hdiutil create -volname "EK Platform Agent" -srcfolder dist/EKPlatformAgent.app -ov -format UDZO dist/EKPlatformAgent-macOS.dmg
       - uses: actions/upload-artifact@v4
         with:
@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --all-groups
-      - run: uv run pyinstaller --name EKPlatformAgent --windowed --onefile src/ek_agent/__main__.py
+      - run: uv run pyinstaller --name EKPlatformAgent --windowed --onefile --hidden-import=tkinter --hidden-import=_tkinter src/ek_agent/__main__.py
       - uses: actions/upload-artifact@v4
         with:
           name: ek-platform-agent-windows
