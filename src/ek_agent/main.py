@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -145,7 +146,11 @@ class App:
             pystray.MenuItem("Salir", lambda _icon, _item: self.root.after(0, self.quit)),
         )
         self.tray = pystray.Icon("ek-platform-agent", image, "EK Platform Agent", menu)
-        threading.Thread(target=self.tray.run, name="tray", daemon=True).start()
+        if sys.platform == "darwin":
+            # AppKit requires its event loop to share the main Tk loop.
+            self.tray.run_detached()
+        else:
+            threading.Thread(target=self.tray.run, name="tray", daemon=True).start()
 
     def quit(self) -> None:
         self.stop_worker()
