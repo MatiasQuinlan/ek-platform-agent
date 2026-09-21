@@ -4,6 +4,9 @@ import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+import pystray
+from PIL import Image, ImageDraw
+
 from .backend import BackendClient
 from .codex import installed, login
 from .cognito import login as cognito_login
@@ -26,9 +29,13 @@ class App:
         self.token = tk.StringVar(value="")
         self.status = tk.StringVar(value="Desconectado")
         self.worker: Worker | None = None
+        self.tray: pystray.Icon | None = None
         self._build()
+        self.root.protocol("WM_DELETE_WINDOW", self.hide_window)
+        self._start_tray()
         if get_access_token():
             self.start_worker()
+            self.hide_window()
 
     def _build(self) -> None:
         frame = ttk.Frame(self.root, padding=20)
@@ -94,6 +101,9 @@ class App:
             return
         set_access_token(token)
         save({"api_url": self.api.get()})
+        if self.worker and self.worker.is_running:
+            self.status.set("Agente conectado")
+            return
         client = BackendClient(self.api.get(), token)
         self.worker = Worker(client, self._notify)
         self.worker.start()
@@ -103,6 +113,37 @@ class App:
         if self.worker:
             self.worker.stop()
         self.status.set("Agente detenido")
+
+    def hide_window(self) -> None:
+        self.root.withdraw()
+
+    def show_window(self) -> None:
+        self.root.after(0, self.root.deiconify)
+        self.root.after(0, self.root.lift)
+
+    def _start_tray(self) -> None:
+        image = Image.new("RGBA", (64, 64), (29, 78, 216, 255))
+        draw = ImageDraw.Draw(image)
+        draw.rounded_rectangle((8, 8, 56, 56), radius=12, fill=(255, 255, 255, 255))
+        draw.text((22, 17), "EK", fill=(29, 78, 216, 255))
+        menu = pystray.Menu(
+            pystray.MenuItem("Mostrar ventana", lambda _icon, _item: self.show_window()),
+            pystray.MenuItem(
+                "Iniciar agente", lambda _icon, _item: self.root.after(0, self.start_worker)
+            ),
+            pystray.MenuItem(
+                "Detener agente", lambda _icon, _item: self.root.after(0, self.stop_worker)
+            ),
+            pystray.MenuItem("Salir", lambda _icon, _item: self.root.after(0, self.quit)),
+        )
+        self.tray = pystray.Icon("ek-platform-agent", image, "EK Platform Agent", menu)
+        threading.Thread(target=self.tray.run, name="tray", daemon=True).start()
+
+    def quit(self) -> None:
+        self.stop_worker()
+        if self.tray:
+            self.tray.stop()
+        self.root.destroy()
 
     def _notify(self, message: str) -> None:
         self.root.after(0, self.status.set, message)

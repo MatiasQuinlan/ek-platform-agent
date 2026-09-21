@@ -16,8 +16,12 @@ class Worker:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
+    @property
+    def is_running(self) -> bool:
+        return bool(self._thread and self._thread.is_alive())
+
     def start(self) -> None:
-        if self._thread and self._thread.is_alive():
+        if self.is_running:
             return
         self._stop.clear()
         self._thread = threading.Thread(target=self._run, daemon=True)

@@ -3,7 +3,7 @@ name = "ek-platform-agent"
 version = "0.1.0"
 description = "Local EK Platform agent powered by the user's Codex/ChatGPT session"
 requires-python = ">=3.11"
-dependencies = ["keyring>=25.6.0"]
+dependencies = ["keyring>=25.6.0", "pillow>=11.0.0", "pystray>=0.19.5"]
 
 [build-system]
 requires = ["setuptools>=75"]

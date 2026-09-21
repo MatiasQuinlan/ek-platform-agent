@@ -19,8 +19,13 @@ Pulsa **Conectar ChatGPT** para abrir el flujo oficial `codex login`. Después i
 
 El token Cognito se guarda usando el almacén de credenciales del sistema mediante `keyring`; la sesión de ChatGPT permanece bajo el control de Codex CLI.
 
-## Builds
+## Aplicaciones instalables
 
-GitHub Actions produce builds independientes para macOS y Windows con PyInstaller. Se ejecutan manualmente o al publicar un tag `v*`.
+GitHub Actions genera dos artefactos multiplataforma mediante PyInstaller:
 
-La versión inicial es un agente de escritorio sin firma/notarización. Antes de distribución pública hay que añadir certificados de firma de Apple y Authenticode para Windows.
+- macOS: `EKPlatformAgent-macOS.dmg`, que contiene `EKPlatformAgent.app`.
+- Windows: `EKPlatformAgent.exe` como aplicación GUI, sin ventana de terminal.
+
+La aplicación queda disponible en la barra de menú de macOS o en el área de notificación de Windows. Desde ese menú se puede mostrar la ventana, iniciar/detener el agente o salir. Después del primer login, los siguientes lanzamientos quedan ocultos en la bandeja y el agente se inicia automáticamente.
+
+El workflow se ejecuta manualmente o al publicar un tag `v*`. Los artefactos se descargan desde la ejecución de GitHub Actions `Build agent`. Para distribución pública todavía hay que añadir firma/notarización de Apple y firma Authenticode para Windows.
