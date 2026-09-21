@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -12,6 +13,8 @@ from .codex import installed, login
 from .cognito import login as cognito_login
 from .config import get_access_token, load, save, set_access_token
 from .worker import Worker
+
+logger = logging.getLogger(__name__)
 
 
 class App:
@@ -95,19 +98,24 @@ class App:
             messagebox.showerror("Cuenta EK Platform", str(error))
 
     def start_worker(self) -> None:
-        token = self.token.get() or get_access_token()
-        if not self.api.get() or not token:
-            messagebox.showwarning("Configuración", "Indica la API y el token Cognito")
-            return
-        set_access_token(token)
-        save({"api_url": self.api.get()})
-        if self.worker and self.worker.is_running:
+        try:
+            token = self.token.get() or get_access_token()
+            if not self.api.get() or not token:
+                messagebox.showwarning("Configuración", "Indica la API y el token Cognito")
+                return
+            set_access_token(token)
+            save({"api_url": self.api.get()})
+            if self.worker and self.worker.is_running:
+                self.status.set("Agente conectado")
+                return
+            client = BackendClient(self.api.get(), token)
+            self.worker = Worker(client, self._notify)
+            self.worker.start()
             self.status.set("Agente conectado")
-            return
-        client = BackendClient(self.api.get(), token)
-        self.worker = Worker(client, self._notify)
-        self.worker.start()
-        self.status.set("Agente conectado")
+        except Exception as error:
+            logger.exception("No se pudo iniciar el agente")
+            self.status.set(f"Error al iniciar: {error}")
+            messagebox.showerror("EK Platform Agent", str(error))
 
     def stop_worker(self) -> None:
         if self.worker:
