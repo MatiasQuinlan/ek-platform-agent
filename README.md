@@ -21,9 +21,10 @@ El token Cognito se guarda usando el almacén de credenciales del sistema median
 
 ### Codex app-server (experimental)
 
-La ejecución persistente se habilita con `EK_CODEX_APP_SERVER=true`. El agente inicia
+La ejecución persistente está habilitada por defecto (equivale a
+`EK_CODEX_APP_SERVER=true`). El agente inicia
 `codex app-server --listen stdio://` y habla JSONL por stdin/stdout; si la bandera no está
-activa, conserva el adaptador compatible basado en `codex exec`.
+activa (`EK_CODEX_APP_SERVER=false`), conserva el adaptador compatible basado en `codex exec`.
 
 Cada job incluye `conversationId`. Cuando está habilitado el app-server, el agente guarda el
 ID de thread asociado a esa conversación en el almacén protegido de credenciales del sistema

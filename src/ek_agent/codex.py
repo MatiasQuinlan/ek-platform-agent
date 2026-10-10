@@ -312,7 +312,7 @@ class PersistentCodexExecutor:
 
 
 def create_executor() -> ExecutionInterface:
-    enabled = os.environ.get("EK_CODEX_APP_SERVER", "").strip().lower() in {
+    enabled = os.environ.get("EK_CODEX_APP_SERVER", "true").strip().lower() in {
         "1",
         "true",
         "yes",
