@@ -115,7 +115,7 @@ class PersistentCodexExecutor:
 
     def _start(self) -> None:
         self._process = self._popen(
-            [self.command, "app-server"],
+            [self.command, "app-server", "--listen", "stdio://"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

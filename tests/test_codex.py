@@ -37,9 +37,16 @@ def test_persistent_executor_initializes_thread_and_collects_turn_deltas() -> No
             {"jsonrpc": "2.0", "method": "turn/completed", "params": {}},
         ]
     )
-    executor = codex.PersistentCodexExecutor("codex", popen=lambda *_args, **_kwargs: process)
+    launched = []
+
+    def popen(*args, **kwargs):
+        launched.append((args, kwargs))
+        return process
+
+    executor = codex.PersistentCodexExecutor("codex", popen=popen)
 
     assert executor.execute("prompt") == "Hola mundo"
+    assert launched[0][0] == (["codex", "app-server", "--listen", "stdio://"],)
     requests = [json.loads(line) for line in process.stdin.getvalue().splitlines()]
     assert [request.get("method") for request in requests] == [
         "initialize",

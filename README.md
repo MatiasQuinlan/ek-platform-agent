@@ -19,6 +19,16 @@ Pulsa **Conectar ChatGPT** para abrir el flujo oficial `codex login`. Después i
 
 El token Cognito se guarda usando el almacén de credenciales del sistema mediante `keyring`; la sesión de ChatGPT permanece bajo el control de Codex CLI.
 
+### Codex app-server (experimental)
+
+La ejecución persistente se habilita con `EK_CODEX_APP_SERVER=true`. El agente inicia
+`codex app-server --listen stdio://` y habla JSONL por stdin/stdout; si la bandera no está
+activa, conserva el adaptador compatible basado en `codex exec`.
+
+El adaptador puede solicitar `thread/resume`, pero el worker todavía no persiste el ID del
+thread en disco. Por ello, si el proceso del agente se reinicia, la siguiente tarea crea un
+nuevo thread mediante `thread/start`; la continuidad entre reinicios queda pendiente.
+
 ## Aplicaciones instalables
 
 GitHub Actions genera dos artefactos multiplataforma mediante PyInstaller:
