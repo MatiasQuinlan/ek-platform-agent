@@ -76,9 +76,12 @@ def test_persistent_executor_emits_incremental_events() -> None:
     executor.close()
 
 
-def test_executor_factory_uses_legacy_by_default(monkeypatch) -> None:
+def test_executor_factory_uses_app_server_by_default(monkeypatch) -> None:
     monkeypatch.delenv("EK_CODEX_APP_SERVER", raising=False)
-    assert isinstance(codex.create_executor(), codex.CodexExecExecutor)
+    monkeypatch.setattr(codex, "_codex_path", lambda: "/usr/local/bin/codex")
+    executor = codex.create_executor()
+    assert isinstance(executor, codex.PersistentCodexExecutor)
+    executor.close()
 
 
 def test_executor_factory_uses_app_server_when_enabled(monkeypatch) -> None:
