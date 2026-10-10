@@ -6,13 +6,19 @@ from collections.abc import Callable
 from typing import Any
 
 from .backend import BackendClient
-from .codex import execute
+from .codex import ExecutionInterface, create_executor
 
 
 class Worker:
-    def __init__(self, client: BackendClient, notify: Callable[[str], None]) -> None:
+    def __init__(
+        self,
+        client: BackendClient,
+        notify: Callable[[str], None],
+        executor: ExecutionInterface | None = None,
+    ) -> None:
         self.client = client
         self.notify = notify
+        self.executor = executor or create_executor()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -29,6 +35,7 @@ class Worker:
 
     def stop(self) -> None:
         self._stop.set()
+        self.executor.close()
 
     def _run(self) -> None:
         while not self._stop.is_set():
@@ -42,7 +49,7 @@ class Worker:
                         f"del cliente autorizado. Devuelve JSON con title, content y citations. "
                         f"Solicitud: {job['query']} Contexto: {context}"
                     )
-                    output = execute(prompt)
+                    output = self.executor.execute(prompt)
                     try:
                         result: dict[str, Any] = json.loads(output)
                     except json.JSONDecodeError:
