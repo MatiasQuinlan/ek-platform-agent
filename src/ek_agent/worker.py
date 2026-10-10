@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import threading
 from collections.abc import Callable
@@ -7,6 +8,7 @@ from typing import Any
 
 from .backend import BackendClient
 from .codex import ExecutionInterface, create_executor
+from .config import get_thread_id, set_thread_id
 
 
 class Worker:
@@ -49,7 +51,39 @@ class Worker:
                         f"del cliente autorizado. Devuelve JSON con title, content y citations. "
                         f"Solicitud: {job['query']} Contexto: {context}"
                     )
-                    output = self.executor.execute(prompt)
+                    sequence = 0
+
+                    def publish(event: dict[str, Any]) -> None:
+                        nonlocal sequence
+                        sequence += 1
+                        self.client.post_event(job, sequence, event)
+
+                    conversation_id = str(job.get("conversationId", ""))
+                    stored_thread_id = get_thread_id(conversation_id)
+                    # Keep custom/legacy test executors and the original exec
+                    # adapter compatible while allowing app-server executors
+                    # to receive persistence and streaming hooks.
+                    try:
+                        parameters = inspect.signature(self.executor.execute).parameters
+                    except (TypeError, ValueError):
+                        parameters = {}
+                    kwargs: dict[str, Any] = {}
+                    accepts_kwargs = any(
+                        parameter.kind is inspect.Parameter.VAR_KEYWORD
+                        for parameter in parameters.values()
+                    )
+                    if "on_event" in parameters or accepts_kwargs:
+                        kwargs["on_event"] = publish
+                    elif "event_callback" in parameters:
+                        kwargs["event_callback"] = publish
+                    elif "callback" in parameters:
+                        kwargs["callback"] = publish
+                    if "thread_id" in parameters or accepts_kwargs:
+                        kwargs["thread_id"] = stored_thread_id
+                    output = self.executor.execute(prompt, **kwargs)
+                    thread_id = getattr(self.executor, "thread_id", None)
+                    if conversation_id and thread_id:
+                        set_thread_id(conversation_id, thread_id)
                     try:
                         result: dict[str, Any] = json.loads(output)
                     except json.JSONDecodeError:

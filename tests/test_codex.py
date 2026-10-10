@@ -59,6 +59,23 @@ def test_persistent_executor_initializes_thread_and_collects_turn_deltas() -> No
     assert json.loads(process.stdin.getvalue().splitlines()[-1])["method"] == "shutdown"
 
 
+def test_persistent_executor_emits_incremental_events() -> None:
+    process = FakeProcess(
+        [
+            {"jsonrpc": "2.0", "id": 1, "result": {}},
+            {"jsonrpc": "2.0", "id": 2, "result": {"thread": {"id": "thread-1"}}},
+            {"jsonrpc": "2.0", "id": 3, "result": {"turn": {"id": "turn-1"}}},
+            {"jsonrpc": "2.0", "method": "item/agentMessage/delta", "params": {"delta": "Hola"}},
+            {"jsonrpc": "2.0", "method": "turn/completed", "params": {}},
+        ]
+    )
+    events = []
+    executor = codex.PersistentCodexExecutor("codex", popen=lambda *args, **kwargs: process)
+    assert executor.execute("prompt", on_event=events.append) == "Hola"
+    assert events == [{"type": "assistant.delta", "delta": "Hola"}, {"type": "turn.completed"}]
+    executor.close()
+
+
 def test_executor_factory_uses_legacy_by_default(monkeypatch) -> None:
     monkeypatch.delenv("EK_CODEX_APP_SERVER", raising=False)
     assert isinstance(codex.create_executor(), codex.CodexExecExecutor)

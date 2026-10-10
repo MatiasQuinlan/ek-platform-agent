@@ -37,3 +37,21 @@ def get_access_token() -> str | None:
 
 def set_access_token(token: str) -> None:
     keyring.set_password(SERVICE, "cognito-access-token", token)
+
+
+def get_thread_id(conversation_id: str) -> str | None:
+    """Return the local Codex thread for an EK conversation.
+
+    Thread identifiers are credentials/session state and must never be sent to
+    the backend, so they live in the operating system keyring alongside the
+    Cognito token.
+    """
+    if not conversation_id:
+        return None
+    return keyring.get_password(SERVICE, f"codex-thread:{conversation_id}")
+
+
+def set_thread_id(conversation_id: str, thread_id: str) -> None:
+    if not conversation_id or not thread_id:
+        return
+    keyring.set_password(SERVICE, f"codex-thread:{conversation_id}", thread_id)

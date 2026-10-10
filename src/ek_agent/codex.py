@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Any, Protocol
 
 
@@ -73,7 +73,12 @@ def execute(prompt: str) -> str:
 class ExecutionInterface(Protocol):
     """The local execution boundary used by the background worker."""
 
-    def execute(self, prompt: str) -> str: ...
+    def execute(
+        self,
+        prompt: str,
+        on_event: Callable[[dict[str, Any]], None] | None = None,
+        thread_id: str | None = None,
+    ) -> str: ...
 
     def close(self) -> None: ...
 
@@ -81,7 +86,12 @@ class ExecutionInterface(Protocol):
 class CodexExecExecutor:
     """Compatibility adapter for the original one-shot CLI invocation."""
 
-    def execute(self, prompt: str) -> str:
+    def execute(
+        self,
+        prompt: str,
+        on_event: Callable[[dict[str, Any]], None] | None = None,
+        thread_id: str | None = None,
+    ) -> str:
         return execute(prompt)
 
     def close(self) -> None:
@@ -169,6 +179,10 @@ class PersistentCodexExecutor:
             return
         self.start_thread()
 
+    @property
+    def thread_id(self) -> str | None:
+        return self._thread_id
+
     def start_thread(self) -> str:
         """Create a new server-side conversation and return its identifier."""
         result = self._request("thread/start", {})
@@ -206,7 +220,9 @@ class PersistentCodexExecutor:
             )
         return ""
 
-    def _turn(self, prompt: str) -> str:
+    def _turn(
+        self, prompt: str, on_event: Callable[[dict[str, Any]], None] | None = None
+    ) -> str:
         if not self._thread_id:
             raise AppServerError("Codex thread no está iniciado")
         self._next_id += 1
@@ -232,25 +248,41 @@ class PersistentCodexExecutor:
                 continue
             method = value.get("method", "")
             if method in {"item/agentMessage/delta", "item/agent_message/delta"}:
-                chunks.append(self._event_text(value))
+                delta = self._event_text(value)
+                chunks.append(delta)
+                if on_event:
+                    on_event({"type": "assistant.delta", "delta": delta})
             if method in {"turn/completed", "turn/failed"}:
                 if method == "turn/failed":
                     raise AppServerError(str(value.get("params", {})))
                 if not chunks:
-                    chunks.append(self._event_text(value))
+                    completed_text = self._event_text(value)
+                    chunks.append(completed_text)
+                    if on_event and completed_text:
+                        on_event({"type": "assistant.delta", "delta": completed_text})
+                if on_event:
+                    on_event({"type": "turn.completed"})
                 break
         if not response_seen:
             raise AppServerError("Sin respuesta para turn/start")
         return "".join(chunks).strip()
 
-    def execute(self, prompt: str) -> str:
+    def execute(
+        self,
+        prompt: str,
+        on_event: Callable[[dict[str, Any]], None] | None = None,
+        thread_id: str | None = None,
+    ) -> str:
         with self._lock:
             for attempt in range(2):
                 try:
                     if not self.is_running:
                         self._start()
-                    self._ensure_thread()
-                    return self._turn(prompt)
+                    if thread_id and thread_id != self._thread_id:
+                        self.resume_thread(thread_id)
+                    else:
+                        self._ensure_thread()
+                    return self._turn(prompt, on_event)
                 except (AppServerError, OSError, BrokenPipeError):
                     self.restart()
                     if attempt == 1:

@@ -25,6 +25,14 @@ class BackendClient:
             body={"result": result},
         )
 
+    def post_event(self, job: dict[str, Any], seq: int, event: dict[str, Any]) -> None:
+        """Publish one ordered app-server event for a claimed job."""
+        self._request(
+            f"/agencies/{job['agencyId']}/clients/{job['clientId']}/ai/jobs/{job['jobId']}/events",
+            method="POST",
+            body={"seq": seq, **event},
+        )
+
     def _request(
         self, path: str, method: str = "GET", body: dict[str, Any] | None = None
     ) -> tuple[int, dict[str, Any]]:

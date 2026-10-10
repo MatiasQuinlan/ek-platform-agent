@@ -25,9 +25,17 @@ La ejecución persistente se habilita con `EK_CODEX_APP_SERVER=true`. El agente 
 `codex app-server --listen stdio://` y habla JSONL por stdin/stdout; si la bandera no está
 activa, conserva el adaptador compatible basado en `codex exec`.
 
-El adaptador puede solicitar `thread/resume`, pero el worker todavía no persiste el ID del
-thread en disco. Por ello, si el proceso del agente se reinicia, la siguiente tarea crea un
-nuevo thread mediante `thread/start`; la continuidad entre reinicios queda pendiente.
+Cada job incluye `conversationId`. Cuando está habilitado el app-server, el agente guarda el
+ID de thread asociado a esa conversación en el almacén protegido de credenciales del sistema
+(keyring); nunca lo envía al backend. Así, los jobs posteriores reanudan el mismo thread con
+`thread/resume`, incluso después de reiniciar el agente. Durante la ejecución publica eventos
+`assistant.delta` y `turn.completed` ordenados por `seq` en el endpoint de eventos del job y
+solo después envía el resultado JSON habitual al endpoint de completado.
+
+La ejecución heredada mediante `codex exec` sigue siendo el fallback predeterminado. El
+adaptador de ejecución acepta un callback opcional para eventos incrementales, por lo que los
+ejecutores personalizados existentes que solo implementan `execute(prompt)` siguen siendo
+compatibles.
 
 ## Aplicaciones instalables
 
