@@ -220,9 +220,7 @@ class PersistentCodexExecutor:
             )
         return ""
 
-    def _turn(
-        self, prompt: str, on_event: Callable[[dict[str, Any]], None] | None = None
-    ) -> str:
+    def _turn(self, prompt: str, on_event: Callable[[dict[str, Any]], None] | None = None) -> str:
         if not self._thread_id:
             raise AppServerError("Codex thread no está iniciado")
         self._next_id += 1
