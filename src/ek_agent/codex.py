@@ -39,6 +39,19 @@ def _codex_path() -> str | None:
     return None
 
 
+def _codex_environment(command: str) -> dict[str, str]:
+    """Make Node/NVM available when the agent is launched from Finder."""
+    environment = os.environ.copy()
+    command_path = Path(command).resolve()
+    node_bins = [str(command_path.parent)]
+    nvm_root = Path.home() / ".nvm/versions/node"
+    if nvm_root.exists():
+        node_bins.extend(str(path / "bin") for path in sorted(nvm_root.glob("*")))
+    current_path = environment.get("PATH", "")
+    environment["PATH"] = os.pathsep.join(dict.fromkeys([*node_bins, current_path]))
+    return environment
+
+
 def installed() -> bool:
     return _codex_path() is not None
 
@@ -47,7 +60,7 @@ def login() -> subprocess.Popen[str]:
     command = _codex_path()
     if not command:
         raise RuntimeError("Codex CLI no está instalado o no está en PATH")
-    return subprocess.Popen([command, "login"], text=True)
+    return subprocess.Popen([command, "login"], text=True, env=_codex_environment(command))
 
 
 def execute(prompt: str) -> str:
@@ -66,6 +79,7 @@ def execute(prompt: str) -> str:
         text=True,
         timeout=300,
         check=True,
+        env=_codex_environment(command),
     )
     return result.stdout.strip()
 
@@ -131,6 +145,7 @@ class PersistentCodexExecutor:
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
+            env=_codex_environment(self.command),
         )
         self._thread_id = None
         self._request(
