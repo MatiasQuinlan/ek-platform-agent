@@ -53,10 +53,10 @@ class Worker:
                     )
                     sequence = 0
 
-                    def publish(event: dict[str, Any]) -> None:
+                    def publish(event: dict[str, Any], current_job: dict[str, Any] = job) -> None:
                         nonlocal sequence
                         sequence += 1
-                        self.client.post_event(job, sequence, event)
+                        self.client.post_event(current_job, sequence, event)
 
                     conversation_id = str(job.get("conversationId", ""))
                     stored_thread_id = get_thread_id(conversation_id)
